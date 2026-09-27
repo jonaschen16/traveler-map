@@ -18,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="zh-Hant" className={`${geistSans.variable} h-full antialiased`}>
       <body className="flex h-full flex-col">
         <Header />
-        <main className="flex-1">{children}</main>
+        <main className="relative min-h-0 flex-1">{children}</main>
       </body>
     </html>
   );
