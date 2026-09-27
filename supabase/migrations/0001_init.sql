@@ -186,3 +186,14 @@ create policy "owners or admins delete contents"
 grant select on public.profiles, public.spots, public.spot_contents to anon, authenticated;
 grant update on public.profiles to authenticated;
 grant insert, update, delete on public.spots, public.spot_contents to authenticated;
+
+-- ============================================================
+-- Backfill profiles for users who signed in before this ran
+-- ============================================================
+insert into public.profiles (id, display_name, avatar_url)
+select
+  id,
+  coalesce(raw_user_meta_data ->> 'full_name', raw_user_meta_data ->> 'name', ''),
+  raw_user_meta_data ->> 'avatar_url'
+from auth.users
+on conflict (id) do nothing;

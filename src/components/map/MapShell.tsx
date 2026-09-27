@@ -12,6 +12,7 @@ import {
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps";
 import type { SpotDraft, SpotMarker } from "@/lib/types";
+import { centerBesidePanel } from "@/lib/map";
 import SpotMarkers from "./SpotMarkers";
 import SpotSearch from "./SpotSearch";
 import AddSpotPanel from "./AddSpotPanel";
@@ -64,9 +65,7 @@ function MapView({ spots, canCreate, children }: Props) {
     if (!spot) return;
     pannedTo.current = selectedId;
     if ((map.getZoom() ?? 0) < 13) map.setZoom(15);
-    map.panTo(spot);
-    // On phones the bottom sheet covers the lower part of the map.
-    if (window.innerWidth < 640) map.panBy(0, window.innerHeight * 0.2);
+    centerBesidePanel(map, { lat: spot.lat, lng: spot.lng });
   }, [map, selectedId, spots]);
   useEffect(() => {
     if (!selectedId) pannedTo.current = null;

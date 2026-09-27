@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { SpotDraft } from "@/lib/types";
+import { centerBesidePanel } from "@/lib/map";
 
 // Google Places autocomplete, used when creating a spot.
 export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => void }) {
@@ -54,8 +55,10 @@ export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => 
       address: place.formattedAddress ?? null,
       placeId: place.id,
     });
-    map?.panTo(latLng);
-    map?.setZoom(16);
+    if (map) {
+      map.setZoom(16);
+      centerBesidePanel(map, latLng);
+    }
   }
 
   return (
