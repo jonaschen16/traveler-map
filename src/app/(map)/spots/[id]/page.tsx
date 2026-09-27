@@ -5,6 +5,8 @@ import { getCurrentProfile } from "@/lib/auth";
 import type { Spot } from "@/lib/types";
 import Panel from "@/components/map/Panel";
 import SpotActions from "@/components/map/SpotActions";
+import AddContentForm from "@/components/content/AddContentForm";
+import ContentItem, { type ContentWithCreator } from "@/components/content/ContentItem";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -23,6 +25,16 @@ const getSpot = cache(async (id: string): Promise<SpotWithCreator | null> => {
   return data;
 });
 
+async function getContents(spotId: string): Promise<ContentWithCreator[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("spot_contents")
+    .select("*, creator:profiles!spot_contents_created_by_fkey(display_name, avatar_url)")
+    .eq("spot_id", spotId)
+    .order("created_at", { ascending: false });
+  return data ?? [];
+}
+
 export async function generateMetadata({ params }: PageProps<"/spots/[id]">): Promise<Metadata> {
   const spot = await getSpot((await params).id);
   if (!spot) return { title: "找不到景點 | Traveler Map" };
@@ -34,7 +46,11 @@ export async function generateMetadata({ params }: PageProps<"/spots/[id]">): Pr
 
 export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
   const { id } = await params;
-  const [spot, profile] = await Promise.all([getSpot(id), getCurrentProfile()]);
+  const [spot, profile, contents] = await Promise.all([
+    getSpot(id),
+    getCurrentProfile(),
+    UUID.test(id) ? getContents(id) : Promise.resolve([]),
+  ]);
 
   if (!spot) {
     return (
@@ -44,8 +60,9 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
     );
   }
 
-  const canEdit =
-    !!profile && !profile.is_banned && (profile.id === spot.created_by || profile.role === "admin");
+  const isMember = !!profile && !profile.is_banned;
+  const isAdmin = isMember && profile.role === "admin";
+  const canEdit = isMember && (profile.id === spot.created_by || isAdmin);
 
   const mapsUrl = new URL("https://www.google.com/maps/search/");
   mapsUrl.searchParams.set("api", "1");
@@ -78,8 +95,28 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
       )}
 
       <section className="mt-6 border-t border-gray-100 pt-4">
-        <h3 className="font-bold text-gray-900">旅人分享</h3>
-        <p className="mt-2 text-sm text-gray-500">內容功能將在第 3 階段加入。</p>
+        <h3 className="font-bold text-gray-900">旅人分享（{contents.length}）</h3>
+        <div className="mt-3">
+          {isMember ? (
+            <AddContentForm spotId={spot.id} />
+          ) : (
+            <p className="text-sm text-gray-500">登入後可以分享 Facebook 貼文或網址。</p>
+          )}
+        </div>
+        {contents.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-500">還沒有人分享，當第一個吧！</p>
+        ) : (
+          <ul className="mt-4 space-y-6">
+            {contents.map((c) => (
+              <li key={c.id}>
+                <ContentItem
+                  content={c}
+                  canManage={isMember && (profile.id === c.created_by || isAdmin)}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </Panel>
   );
