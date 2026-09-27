@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { fmt } from "@/i18n/config";
+import { useI18n } from "@/i18n/client";
 
 // Edit / delete controls, shown only to the spot's creator and admins.
 // The database (RLS) enforces the same rule.
@@ -15,6 +17,7 @@ export default function SpotActions({
   name: string;
   description: string | null;
 }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(initialName);
@@ -32,7 +35,7 @@ export default function SpotActions({
       .eq("id", id);
     setBusy(false);
     if (error) {
-      setError(`儲存失敗：${error.message}`);
+      setError(fmt(t.common.saveFailed, { message: error.message }));
       return;
     }
     setEditing(false);
@@ -40,12 +43,12 @@ export default function SpotActions({
   }
 
   async function remove() {
-    if (!confirm(`確定要刪除「${initialName}」？景點下的所有內容也會一起刪除。`)) return;
+    if (!confirm(fmt(t.spot.confirmDelete, { name: initialName }))) return;
     setBusy(true);
     const { error } = await createClient().from("spots").delete().eq("id", id);
     if (error) {
       setBusy(false);
-      setError(`刪除失敗：${error.message}`);
+      setError(fmt(t.common.deleteFailed, { message: error.message }));
       return;
     }
     router.push("/");
@@ -59,7 +62,7 @@ export default function SpotActions({
     return (
       <form onSubmit={save} className="mt-4 space-y-3 rounded-lg border border-gray-200 p-4">
         <label className="block">
-          <span className="text-sm font-medium text-gray-700">名稱 *</span>
+          <span className="text-sm font-medium text-gray-700">{t.addSpot.name}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -69,7 +72,7 @@ export default function SpotActions({
           />
         </label>
         <label className="block">
-          <span className="text-sm font-medium text-gray-700">簡介</span>
+          <span className="text-sm font-medium text-gray-700">{t.addSpot.description}</span>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -85,14 +88,14 @@ export default function SpotActions({
             disabled={busy || !name.trim()}
             className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
           >
-            儲存
+            {t.common.save}
           </button>
           <button
             type="button"
             onClick={() => setEditing(false)}
             className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
-            取消
+            {t.common.cancel}
           </button>
         </div>
       </form>
@@ -103,10 +106,10 @@ export default function SpotActions({
     <div className="mt-3">
       <div className="flex gap-3 text-sm">
         <button onClick={() => setEditing(true)} className="text-gray-600 hover:underline">
-          編輯
+          {t.common.edit}
         </button>
         <button onClick={remove} disabled={busy} className="text-red-600 hover:underline">
-          刪除
+          {t.common.delete}
         </button>
       </div>
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

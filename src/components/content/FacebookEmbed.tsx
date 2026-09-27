@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { isFacebookVideo } from "@/lib/url";
+import { useI18n } from "@/i18n/client";
 
 declare global {
   interface Window {
@@ -9,10 +10,10 @@ declare global {
   }
 }
 
-const SDK_URL = "https://connect.facebook.net/zh_TW/sdk.js#xfbml=1&version=v25.0";
 let sdk: Promise<void> | null = null;
 
-function loadSdk(): Promise<void> {
+// Loaded once per page load; switching language reloads the page.
+function loadSdk(locale: string): Promise<void> {
   sdk ??= new Promise((resolve, reject) => {
     if (!document.getElementById("fb-root")) {
       const root = document.createElement("div");
@@ -20,7 +21,8 @@ function loadSdk(): Promise<void> {
       document.body.prepend(root);
     }
     const script = document.createElement("script");
-    script.src = SDK_URL;
+    const fbLocale = locale === "en" ? "en_US" : "zh_TW";
+    script.src = `https://connect.facebook.net/${fbLocale}/sdk.js#xfbml=1&version=v25.0`;
     script.async = true;
     script.crossOrigin = "anonymous";
     script.onload = () => resolve();
@@ -36,11 +38,12 @@ function loadSdk(): Promise<void> {
 // Official Facebook embed. Only public posts render; for anything else the
 // plugin shows nothing, so a plain link is always shown underneath.
 export default function FacebookEmbed({ url }: { url: string }) {
+  const { locale, t } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
-    loadSdk()
+    loadSdk(locale)
       .then(() => {
         if (!cancelled && ref.current) window.FB?.XFBML.parse(ref.current);
       })
@@ -50,7 +53,7 @@ export default function FacebookEmbed({ url }: { url: string }) {
     return () => {
       cancelled = true;
     };
-  }, [url]);
+  }, [url, locale]);
 
   return (
     <div>
@@ -68,7 +71,7 @@ export default function FacebookEmbed({ url }: { url: string }) {
         rel="noopener noreferrer nofollow ugc"
         className="mt-1 inline-block text-sm text-blue-600 hover:underline"
       >
-        在 Facebook 查看 ↗
+        {t.content.viewOnFacebook}
       </a>
     </div>
   );

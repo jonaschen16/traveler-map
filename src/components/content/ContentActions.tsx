@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { deleteContent, updateContentNote } from "@/app/actions/contents";
+import { useI18n } from "@/i18n/client";
 
 // Edit-note / delete controls, shown to the content's creator and admins.
 export default function ContentActions({ id, note }: { id: string; note: string | null }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -15,7 +17,7 @@ export default function ContentActions({ id, note }: { id: string; note: string 
     startTransition(async () => {
       const result = await action();
       if (result.ok) onOk?.();
-      else setError(result.error ?? "發生錯誤");
+      else setError(result.error ?? t.common.error);
     });
   }
 
@@ -27,7 +29,7 @@ export default function ContentActions({ id, note }: { id: string; note: string 
           onChange={(e) => setDraft(e.target.value)}
           maxLength={500}
           rows={2}
-          placeholder="補充說明"
+          placeholder={t.content.note}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
         />
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -37,10 +39,10 @@ export default function ContentActions({ id, note }: { id: string; note: string 
             disabled={pending}
             className="font-medium text-gray-900 hover:underline"
           >
-            儲存
+            {t.common.save}
           </button>
           <button onClick={() => setEditing(false)} className="text-gray-500 hover:underline">
-            取消
+            {t.common.cancel}
           </button>
         </div>
       </div>
@@ -51,16 +53,16 @@ export default function ContentActions({ id, note }: { id: string; note: string 
     <div className="mt-2">
       <div className="flex gap-3 text-xs">
         <button onClick={() => setEditing(true)} className="text-gray-500 hover:underline">
-          編輯說明
+          {t.content.editNote}
         </button>
         <button
           onClick={() => {
-            if (confirm("確定要刪除這則分享？")) run(() => deleteContent(id));
+            if (confirm(t.content.confirmDelete)) run(() => deleteContent(id));
           }}
           disabled={pending}
           className="text-red-600 hover:underline"
         >
-          刪除
+          {t.common.delete}
         </button>
       </div>
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useI18n } from "@/i18n/client";
 
 // Side panel on desktop, bottom sheet on mobile.
 export default function Panel({
@@ -13,6 +16,7 @@ export default function Panel({
   onClose?: () => void;
   children: ReactNode;
 }) {
+  const { t } = useI18n();
   const closeClass =
     "rounded-full p-1.5 text-xl leading-none text-gray-500 hover:bg-gray-100";
 
@@ -21,11 +25,11 @@ export default function Panel({
       <div className="flex items-start justify-between gap-2 border-b border-gray-100 px-5 py-4">
         <h2 className="text-xl font-bold text-gray-900">{title}</h2>
         {closeHref ? (
-          <Link href={closeHref} className={closeClass} aria-label="關閉">
+          <Link href={closeHref} className={closeClass} aria-label={t.common.close}>
             ×
           </Link>
         ) : (
-          <button onClick={onClose} className={closeClass} aria-label="關閉">
+          <button onClick={onClose} className={closeClass} aria-label={t.common.close}>
             ×
           </button>
         )}

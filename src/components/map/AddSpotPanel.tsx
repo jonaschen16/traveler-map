@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import type { SpotDraft } from "@/lib/types";
 import Panel from "./Panel";
 import PlaceSearch from "./PlaceSearch";
+import { fmt } from "@/i18n/config";
+import { useI18n } from "@/i18n/client";
 
 type Props = {
   draft: SpotDraft | null;
@@ -15,10 +17,11 @@ type Props = {
 };
 
 export default function AddSpotPanel({ draft, onDraft, onClose, onCreated }: Props) {
+  const { t } = useI18n();
   return (
-    <Panel title="新增景點" onClose={onClose}>
+    <Panel title={t.addSpot.title} onClose={onClose}>
       <PlaceSearch onPick={onDraft} />
-      <p className="mt-2 text-sm text-gray-500">或直接在地圖上點選位置</p>
+      <p className="mt-2 text-sm text-gray-500">{t.addSpot.orClickMap}</p>
 
       {draft && (
         // Remount the form (resetting its fields) whenever the location changes.
@@ -42,6 +45,7 @@ function SpotForm({
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const [name, setName] = useState(draft.name);
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
@@ -85,7 +89,11 @@ function SpotForm({
 
     setSaving(false);
     if (error) {
-      setError(error.code === "23505" ? "這個地點已經有人建立了。" : `儲存失敗：${error.message}`);
+      setError(
+        error.code === "23505"
+          ? t.addSpot.duplicate
+          : fmt(t.common.saveFailed, { message: error.message }),
+      );
       return;
     }
     onCreated(data.id);
@@ -94,13 +102,13 @@ function SpotForm({
   if (existing) {
     return (
       <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-        「{existing.name}」已經有人建立了，可以直接到那裡新增內容。
+        {fmt(t.addSpot.existing, { name: existing.name })}
         <Link
           href={`/spots/${existing.id}`}
           onClick={onClose}
           className="mt-2 block font-medium underline"
         >
-          前往這個景點 →
+          {t.addSpot.goToSpot}
         </Link>
       </div>
     );
@@ -109,7 +117,7 @@ function SpotForm({
   return (
     <form onSubmit={submit} className="mt-5 space-y-4">
       <label className="block">
-        <span className="text-sm font-medium text-gray-700">名稱 *</span>
+        <span className="text-sm font-medium text-gray-700">{t.addSpot.name}</span>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -121,12 +129,12 @@ function SpotForm({
       </label>
 
       <div>
-        <span className="text-sm font-medium text-gray-700">地址</span>
-        <p className="mt-1 text-sm text-gray-600">{draft.address ?? "（無）"}</p>
+        <span className="text-sm font-medium text-gray-700">{t.addSpot.address}</span>
+        <p className="mt-1 text-sm text-gray-600">{draft.address ?? t.addSpot.none}</p>
       </div>
 
       <label className="block">
-        <span className="text-sm font-medium text-gray-700">簡介</span>
+        <span className="text-sm font-medium text-gray-700">{t.addSpot.description}</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -143,7 +151,7 @@ function SpotForm({
         disabled={saving || !name.trim()}
         className="w-full rounded-lg bg-gray-900 py-2.5 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
       >
-        {saving ? "儲存中…" : "建立景點"}
+        {saving ? t.common.saving : t.addSpot.create}
       </button>
     </form>
   );

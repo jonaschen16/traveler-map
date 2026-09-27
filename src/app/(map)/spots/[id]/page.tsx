@@ -7,6 +7,9 @@ import Panel from "@/components/map/Panel";
 import SpotActions from "@/components/map/SpotActions";
 import AddContentForm from "@/components/content/AddContentForm";
 import ContentItem, { type ContentWithCreator } from "@/components/content/ContentItem";
+import Link from "next/link";
+import { fmt, formatDate } from "@/i18n/config";
+import { getDictionary, getLocale } from "@/i18n/server";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -37,7 +40,7 @@ async function getContents(spotId: string): Promise<ContentWithCreator[]> {
 
 export async function generateMetadata({ params }: PageProps<"/spots/[id]">): Promise<Metadata> {
   const spot = await getSpot((await params).id);
-  if (!spot) return { title: "找不到景點 | Traveler Map" };
+  if (!spot) return { title: `${(await getDictionary()).spot.notFound} | Traveler Map` };
   return {
     title: `${spot.name} | Traveler Map`,
     description: spot.description ?? spot.address ?? undefined,
@@ -46,16 +49,18 @@ export async function generateMetadata({ params }: PageProps<"/spots/[id]">): Pr
 
 export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
   const { id } = await params;
-  const [spot, profile, contents] = await Promise.all([
+  const [spot, profile, contents, t, locale] = await Promise.all([
     getSpot(id),
     getCurrentProfile(),
     UUID.test(id) ? getContents(id) : Promise.resolve([]),
+    getDictionary(),
+    getLocale(),
   ]);
 
   if (!spot) {
     return (
-      <Panel title="找不到景點" closeHref="/">
-        <p className="text-sm text-gray-600">這個景點不存在或已被刪除。</p>
+      <Panel title={t.spot.notFound} closeHref="/">
+        <p className="text-sm text-gray-600">{t.spot.notFoundText}</p>
       </Panel>
     );
   }
@@ -63,6 +68,9 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
   const isMember = !!profile && !profile.is_banned;
   const isAdmin = isMember && profile.role === "admin";
   const canEdit = isMember && (profile.id === spot.created_by || isAdmin);
+
+  // Split the template around {name} so the name can be a link.
+  const [createdByBefore, createdByAfter = ""] = t.spot.createdBy.split("{name}");
 
   const mapsUrl = new URL("https://www.google.com/maps/search/");
   mapsUrl.searchParams.set("api", "1");
@@ -78,7 +86,7 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
         rel="noopener noreferrer"
         className="mt-1 inline-block text-sm text-blue-600 hover:underline"
       >
-        在 Google 地圖開啟 ↗
+        {t.spot.openInGoogleMaps}
       </a>
 
       {spot.description && (
@@ -86,8 +94,11 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
       )}
 
       <p className="mt-4 text-xs text-gray-500">
-        由 {spot.creator?.display_name || "匿名"} 建立 ·{" "}
-        {new Date(spot.created_at).toLocaleDateString("zh-TW")}
+        {createdByBefore}
+        <Link href={`/users/${spot.created_by}`} className="font-medium hover:underline">
+          {spot.creator?.display_name || t.common.anonymous}
+        </Link>
+        {fmt(createdByAfter, { date: formatDate(spot.created_at, locale) })}
       </p>
 
       {canEdit && (
@@ -95,16 +106,18 @@ export default async function SpotPage({ params }: PageProps<"/spots/[id]">) {
       )}
 
       <section className="mt-6 border-t border-gray-100 pt-4">
-        <h3 className="font-bold text-gray-900">旅人分享（{contents.length}）</h3>
+        <h3 className="font-bold text-gray-900">
+          {fmt(t.spot.contentsTitle, { count: contents.length })}
+        </h3>
         <div className="mt-3">
           {isMember ? (
             <AddContentForm spotId={spot.id} />
           ) : (
-            <p className="text-sm text-gray-500">登入後可以分享 Facebook 貼文或網址。</p>
+            <p className="text-sm text-gray-500">{t.spot.loginToShare}</p>
           )}
         </div>
         {contents.length === 0 ? (
-          <p className="mt-4 text-sm text-gray-500">還沒有人分享，當第一個吧！</p>
+          <p className="mt-4 text-sm text-gray-500">{t.spot.noContents}</p>
         ) : (
           <ul className="mt-4 space-y-6">
             {contents.map((c) => (

@@ -1,6 +1,9 @@
+import Link from "next/link";
 import FacebookEmbed from "./FacebookEmbed";
 import LinkCard from "./LinkCard";
 import ContentActions from "./ContentActions";
+import { formatDate } from "@/i18n/config";
+import { getDictionary, getLocale } from "@/i18n/server";
 
 export type ContentWithCreator = {
   id: string;
@@ -16,13 +19,14 @@ export type ContentWithCreator = {
   creator: { display_name: string; avatar_url: string | null } | null;
 };
 
-export default function ContentItem({
+export default async function ContentItem({
   content: c,
   canManage,
 }: {
   content: ContentWithCreator;
   canManage: boolean;
 }) {
+  const [t, locale] = await Promise.all([getDictionary(), getLocale()]);
   return (
     <article>
       <div className="mb-2 flex items-center gap-2 text-xs text-gray-500">
@@ -35,8 +39,10 @@ export default function ContentItem({
             referrerPolicy="no-referrer"
           />
         )}
-        <span className="font-medium text-gray-700">{c.creator?.display_name || "匿名"}</span>
-        <span>· {new Date(c.created_at).toLocaleDateString("zh-TW")}</span>
+        <Link href={`/users/${c.created_by}`} className="font-medium text-gray-700 hover:underline">
+          {c.creator?.display_name || t.common.anonymous}
+        </Link>
+        <span>· {formatDate(c.created_at, locale)}</span>
       </div>
 
       {c.note && <p className="mb-2 text-sm whitespace-pre-line text-gray-800">{c.note}</p>}

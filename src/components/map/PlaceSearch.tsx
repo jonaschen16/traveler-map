@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import type { SpotDraft } from "@/lib/types";
 import { centerBesidePanel } from "@/lib/map";
+import { useI18n } from "@/i18n/client";
 
 // Google Places autocomplete, used when creating a spot.
 export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => void }) {
+  const { locale, t } = useI18n();
   const map = useMap();
   const places = useMapsLibrary("places");
   const [input, setInput] = useState("");
@@ -24,7 +26,7 @@ export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => 
           await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
             input,
             sessionToken: token.current,
-            language: "zh-TW",
+            language: locale,
             region: "tw",
             locationBias: map?.getBounds() ?? undefined,
           });
@@ -37,7 +39,7 @@ export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => 
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [input, places, map]);
+  }, [input, places, map, locale]);
 
   async function pick(prediction: google.maps.places.PlacePrediction) {
     const place = prediction.toPlace();
@@ -70,7 +72,7 @@ export default function PlaceSearch({ onPick }: { onPick: (draft: SpotDraft) => 
           setInput(e.target.value);
           if (!e.target.value.trim()) setSuggestions([]);
         }}
-        placeholder="搜尋 Google 地點，例如：九份老街"
+        placeholder={t.addSpot.googleSearch}
         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
       />
       {suggestions.length > 0 && (

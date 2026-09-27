@@ -16,6 +16,7 @@ import { centerBesidePanel } from "@/lib/map";
 import SpotMarkers from "./SpotMarkers";
 import SpotSearch from "./SpotSearch";
 import AddSpotPanel from "./AddSpotPanel";
+import { useI18n } from "@/i18n/client";
 
 const TAIWAN = { lat: 23.7, lng: 120.96 };
 
@@ -26,24 +27,26 @@ type Props = {
 };
 
 export default function MapShell(props: Props) {
+  const { locale, t } = useI18n();
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   if (!apiKey) {
     return (
       <div className="absolute inset-0 flex items-center justify-center p-8 text-gray-600">
-        尚未設定 Google Maps API 金鑰（NEXT_PUBLIC_GOOGLE_MAPS_API_KEY）
+        {t.map.noApiKey}
       </div>
     );
   }
 
   return (
-    <APIProvider apiKey={apiKey} language="zh-TW" region="TW">
+    <APIProvider apiKey={apiKey} language={locale} region="TW">
       <MapView {...props} />
     </APIProvider>
   );
 }
 
 function MapView({ spots, canCreate, children }: Props) {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const selectedId = pathname.match(/^\/spots\/([^/]+)/)?.[1] ?? null;
@@ -163,7 +166,7 @@ function MapView({ spots, canCreate, children }: Props) {
             onClick={startAdding}
             className="shrink-0 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white shadow hover:bg-gray-700"
           >
-            ＋ 新增景點
+            {t.map.addSpot}
           </button>
         )}
       </div>
