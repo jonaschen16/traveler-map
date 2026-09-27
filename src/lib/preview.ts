@@ -53,7 +53,12 @@ const MAX_REDIRECTS = 4;
 const MAX_BYTES = 1_000_000;
 
 // fetch() with redirects followed manually so every hop is checked.
-async function safeFetch(start: URL, userAgent: string): Promise<{ res: Response; url: URL }> {
+// `stopAt` ends the chain early at a redirect target it accepts.
+async function safeFetch(
+  start: URL,
+  userAgent: string,
+  stopAt?: (next: URL) => boolean,
+): Promise<{ res: Response; url: URL }> {
   let url = start;
   const signal = AbortSignal.timeout(TIMEOUT_MS);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
@@ -71,6 +76,7 @@ async function safeFetch(start: URL, userAgent: string): Promise<{ res: Response
     if (res.status >= 300 && res.status < 400 && location) {
       await res.body?.cancel();
       url = new URL(location, url);
+      if (stopAt?.(url)) return { res, url };
       continue;
     }
     return { res, url };
@@ -199,15 +205,24 @@ export async function fetchLinkPreview(url: URL): Promise<LinkPreview> {
   };
 }
 
-// facebook.com/share/... links redirect to the real post; the embed plugin
-// needs the real permalink. Falls back to the original URL.
+// facebook.com/share/... links redirect to the real post or photo; the embed
+// plugin needs that permalink. Stop at the first real permalink: Facebook
+// sends anonymous visitors from there on to the login page.
+// Falls back to the original URL.
+function isFacebookPermalink(url: URL): boolean {
+  return /(^|\.)facebook\.com$/i.test(url.hostname) && !/^\/(share|login)(\/|$)/.test(url.pathname);
+}
+
 export async function resolveFacebookUrl(url: URL): Promise<string> {
   if (!/^\/share\//.test(url.pathname) && url.hostname !== "fb.watch") return url.href;
   try {
-    const { res, url: finalUrl } = await safeFetch(url, "facebookexternalhit/1.1");
+    const { res, url: finalUrl } = await safeFetch(
+      url,
+      "facebookexternalhit/1.1",
+      isFacebookPermalink,
+    );
     await res.body?.cancel();
-    const ok = /(^|\.)facebook\.com$/i.test(finalUrl.hostname) && !/^\/login/.test(finalUrl.pathname);
-    return ok ? finalUrl.href : url.href;
+    return isFacebookPermalink(finalUrl) ? finalUrl.href : url.href;
   } catch {
     return url.href;
   }
